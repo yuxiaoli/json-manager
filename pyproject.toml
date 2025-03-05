@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "json-manager"
-version = "0.1.0"
+name = "json-manager-cli"
+version = "0.1.3"
 description = ""
 authors = ["sean <sean.li@vectorindex.cloud>"]
 readme = "README.md"
@@ -18,3 +18,6 @@ python-dotenv = "^1.0.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+jsoncli = "json_manager.main:main"

@@ -12,7 +12,7 @@ The tool also supports downloading JSON data from a URL into a temporary directo
 ## Features
 
 - **Flexible JSON Loading:**  
-  Load JSON files from local paths or remote URLs.  
+  Load JSON files from local paths or remote URLs.
 - **Automatic Format Detection:**  
   The tool inspects the JSON structure and automatically selects the appropriate console (database or JSON) based on the format.
 - **Rich Command-Line Interface:**  
@@ -39,21 +39,35 @@ The tool also supports downloading JSON data from a URL into a temporary directo
   - `thefuzz`
   - `python-dotenv`
 
-Install the required libraries with:
+You can install the required libraries using either of the following methods:
 
-```bash
-pip install cmd2 tinydb requests thefuzz python-dotenv
-```
+- **Using a requirements file:**
+
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+- **Using pip from PyPI:**
+
+  ```bash
+  pip install json-manager-cli
+  ```
 
 ---
 
 ## Installation
 
-Clone the repository and navigate to the project directory:
+Clone the repository and navigate to the project directory if you prefer the source:
 
 ```bash
 git clone <repository_url>
 cd json_manager
+```
+
+Alternatively, you can install the CLI directly from PyPI using:
+
+```bash
+pip install json-manager-cli
 ```
 
 ---
@@ -73,30 +87,40 @@ json_manager/
 
 ## Usage
 
-Run the project using the main entry script. The script accepts a required positional argument for the JSON file or URL, and an optional `--temp` argument for specifying a temporary directory when downloading files:
+### Running the CLI
 
-```bash
-python main.py <path_or_url_to_json> [--temp <temp_directory>]
-```
+After installation, you have two options for running JSON Manager:
+
+1. **Directly via Python:**
+
+   ```bash
+   python main.py <path_or_url_to_json> [--temp <temp_directory>]
+   ```
+
+2. **Using the `jsoncli` command (if installed from PyPI):**
+
+   ```bash
+   jsoncli <path_or_url_to_json> [--temp <temp_directory>]
+   ```
 
 ### Examples
 
 - **Load a local JSON file:**
 
   ```bash
-  python main.py data/sample.json
+  jsoncli data/sample.json
   ```
 
 - **Download and load a JSON file from a URL (saved to the default `temp/` directory):**
 
   ```bash
-  python main.py https://example.com/data.json
+  jsoncli https://example.com/data.json
   ```
 
 - **Specify a custom temporary directory:**
 
   ```bash
-  python main.py https://example.com/data.json --temp /path/to/temp/
+  jsoncli https://example.com/data.json --temp /path/to/temp/
   ```
 
 Based on the JSON structure, the tool will automatically launch either the **database console** or the **JSON console**. Within these consoles, you can use commands like:
