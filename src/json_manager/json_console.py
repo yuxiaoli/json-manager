@@ -344,7 +344,10 @@ class Console(BufferedCmd):
             status_info.append("No data loaded.")
         else:
             if isinstance(self.data, dict):
-                status_info.append("Data is a single dictionary.")
+                dict_key_count = len(self.data)
+                status_info.append(
+                    f"Data is a single dictionary with {dict_key_count} top-level key(s)."
+                )
             elif isinstance(self.data, list):
                 status_info.append(f"Data is a list with {len(self.data)} item(s).")
 
