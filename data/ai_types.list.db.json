@@ -1,0 +1,147 @@
+{
+    "_default": {
+        "1": {
+            "type": "LLM",
+            "description": "Large Language Models for text-based AI tasks",
+            "capabilities": [
+                "text-generation",
+                "chat",
+                "code-generation",
+                "text-completion"
+            ],
+            "example_providers": [
+                "OpenAI (GPT-4)",
+                "Anthropic (Claude)",
+                "Google DeepMind (Gemini)",
+                "Grok",
+                "DeepSeek",
+                "Moonshot AI",
+                "通义",
+                "文心一言",
+                "豆包大模型-火山引擎",
+                "智谱清言"
+            ]
+        },
+        "2": {
+            "type": "Multimodal",
+            "description": "AI models that process and generate text, images, and other data formats",
+            "capabilities": [
+                "text-to-image",
+                "image-to-text",
+                "code-generation",
+                "image-understanding"
+            ],
+            "example_providers": [
+                "Google DeepMind (Gemini)",
+                "OpenAI (GPT-4V)",
+                "文心一言 (ERNIE Bot)",
+                "通义千问"
+            ]
+        },
+        "3": {
+            "type": "Text-to-Image",
+            "description": "AI models that generate images from text prompts",
+            "capabilities": [
+                "image-generation",
+                "inpainting",
+                "image-editing"
+            ],
+            "example_providers": [
+                "OpenAI (DALL·E)",
+                "文心一言",
+                "通义"
+            ]
+        },
+        "4": {
+            "type": "Image-to-Text",
+            "description": "Models that generate textual descriptions based on images",
+            "capabilities": [
+                "image-captioning",
+                "image-analysis",
+                "OCR"
+            ],
+            "example_providers": [
+                "OpenAI (GPT-4V)",
+                "文心一言 (ERNIE-ViLG)",
+                "通义"
+            ]
+        },
+        "5": {
+            "type": "Speech-to-Text",
+            "description": "Transcribes audio into text",
+            "capabilities": [
+                "speech-recognition",
+                "transcription",
+                "translation"
+            ],
+            "example_providers": [
+                "OpenAI (Whisper)",
+                "文心一言",
+                "通义"
+            ]
+        },
+        "6": {
+            "type": "Text-to-Speech",
+            "description": "Generates realistic speech from text",
+            "capabilities": [
+                "text-to-voice",
+                "voice-synthesis",
+                "audio-generation"
+            ],
+            "example_providers": [
+                "OpenAI",
+                "文心一言"
+            ]
+        },
+        "7": {
+            "type": "Embeddings",
+            "description": "Creates vector representations of text for search and AI applications",
+            "capabilities": [
+                "text-embedding",
+                "semantic-search",
+                "vectorization"
+            ],
+            "example_providers": [
+                "OpenAI",
+                "智谱清言"
+            ]
+        },
+        "8": {
+            "type": "Code Generation",
+            "description": "AI-powered code generation and assistance",
+            "capabilities": [
+                "code-generation",
+                "autocomplete",
+                "debugging"
+            ],
+            "example_providers": [
+                "OpenAI (Codex)",
+                "DeepSeek"
+            ]
+        },
+        "9": {
+            "type": "AI Agents",
+            "description": "Autonomous AI-powered agents that interact and perform tasks",
+            "capabilities": [
+                "automated-reasoning",
+                "decision-making"
+            ],
+            "example_providers": [
+                "OpenAI (AutoGPT-like)",
+                "Anthropic (Claude AI Assistants)"
+            ]
+        },
+        "10": {
+            "type": "AI Search",
+            "description": "Search engines powered by AI",
+            "capabilities": [
+                "semantic-search",
+                "information-retrieval"
+            ],
+            "example_providers": [
+                "DeepSeek",
+                "智谱清言"
+            ]
+        }
+    }
+}
