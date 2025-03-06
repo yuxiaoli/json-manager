@@ -1,1 +1,6 @@
-{"_default": {"1": {"hello": {"hello": "world"}}, "2": {"hello": "world"}}}
+{
+    "1": {
+        "hello": "world"
+    },
+    "2": "world"
+}

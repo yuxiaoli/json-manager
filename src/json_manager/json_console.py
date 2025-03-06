@@ -172,46 +172,78 @@ class Console(BufferedCmd):
         "--field",
         action="append",
         required=True,
-        help="Field(s) to search in. Use dot notation for nested fields (e.g. int.hello)."
+        help="Field(s) to search in. Use dot notation for nested fields (e.g., int.hello)."
+    )
+    search_parser.add_argument(
+        "--contains",
+        action="store_true",
+        help="If provided, check if the field value contains the search query as a substring."
+    )
+    search_parser.add_argument(
+        "--regex",
+        action="store_true",
+        help="If provided, treat the search value as a regular expression and match using re.search()."
     )
 
     @cmd2.with_argparser(search_parser)
     @cmd2.with_category(CMD_CATEGORY)
     def do_search(self, args: Any) -> None:
         """
-        Search for records (dicts) where any of the specified fields exactly equal the given value.
-        - If data is a list, we search among all list elements that are dicts.
-        - If data is a dict, we search that single dict.
-
-        Usage: search <value> --field <field1> [--field <field2> ...]
+        Search for records (dicts) where any specified field meets the given 'value'.
+        If a match is found, only print "<field>: <value>" instead of the entire dictionary/object.
         """
+        import json
+        import re
+
         if not self.ensure_data_loaded():
             self.save_data()
             return
 
+        # 1) Decide how we interpret args.value
+        #    (Only parse as JSON if --contains/--regex are NOT provided)
+        if args.contains or args.regex:
+            search_value = args.value  # treat as raw string
+        else:
+            try:
+                search_value = json.loads(args.value)
+            except json.JSONDecodeError:
+                search_value = args.value
+
+        def matches(field_val: Any) -> bool:
+            """Return True if field_val matches search_value (exact, substring, or regex)."""
+            if args.regex:
+                return bool(re.search(str(search_value), str(field_val)))
+            elif args.contains:
+                return str(search_value) in str(field_val)
+            else:
+                return field_val == search_value
+
         results_found = False
 
         if isinstance(self.data, dict):
-            # Treat self.data as one "record"
+            # Single dictionary
             record = self.data
             for field in args.field:
                 field_val = get_nested_value(record, field)
-                if field_val is not None and str(field_val) == args.value:
-                    self.poutput(f"Match found in field '{field}':")
-                    self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
+                if field_val is not None and matches(field_val):
+                    # Print only "path.key: value"
+                    self.poutput(f"{field}: {field_val}")
                     results_found = True
+                    # We stop after the first match for this dict, or continue if you like
+                    # If you want to find matches in other fields, remove this `break`
                     break
 
         elif isinstance(self.data, list):
+            # A list of items
             for idx, item in enumerate(self.data, start=1):
                 if not isinstance(item, dict):
                     continue
                 for field in args.field:
                     field_val = get_nested_value(item, field)
-                    if field_val is not None and str(field_val) == args.value:
-                        self.poutput(f"Match found in item #{idx}, field '{field}':")
-                        self.poutput(json.dumps(item, indent=4, ensure_ascii=False))
+                    if field_val is not None and matches(field_val):
+                        self.poutput(f"{field}: {field_val}")
                         results_found = True
+                        # If you only want the first match per item, break here
                         break
 
         if not results_found:
@@ -223,15 +255,12 @@ class Console(BufferedCmd):
     # FUZZY SEARCH COMMAND
     # ---------------------------
     fuzzy_parser = cmd2.Cmd2ArgumentParser()
-    fuzzy_parser.add_argument(
-        "search_term",
-        help="Term to fuzzy search for"
-    )
+    fuzzy_parser.add_argument("search_term", help="Term to fuzzy search for")
     fuzzy_parser.add_argument(
         "--field",
         action="append",
         required=True,
-        help="Field(s) to perform fuzzy search on. Use dot notation for nested fields (e.g. int.hello)."
+        help="Field(s) to perform fuzzy search on. Use dot notation for nested fields (e.g., int.hello)."
     )
     fuzzy_parser.add_argument(
         "--threshold",
@@ -241,33 +270,34 @@ class Console(BufferedCmd):
     )
 
     @cmd2.with_argparser(fuzzy_parser)
-    def do_fuzzy_search(self, args):
+    @cmd2.with_category(CMD_CATEGORY)
+    def do_fuzzy_search(self, args: Any) -> None:
         """
         Perform a fuzzy search on records (dicts) using the specified field(s).
-        - If data is a list, we search among all list elements that are dicts.
-        - If data is a dict, we treat it as a single "record."
-        If the fuzzy match score >= threshold, we collect the match and sort by score DESC.
+        If a match is found, only print "<field>: <value>", rather than the entire object.
+        Results are sorted by score (descending).
         """
+        from thefuzz import fuzz
+
         if not self.ensure_data_loaded():
             self.save_data()
             return
 
         threshold = args.threshold
-        results = []  # we will store (score, index, record_dict, field, field_value)
+        results = []  # store (score, field, field_val)
 
         if isinstance(self.data, dict):
-            # Single dictionary case
+            # Single dictionary
             record = self.data
             for field in args.field:
                 field_val = get_nested_value(record, field)
                 if field_val is not None:
                     score = fuzz.ratio(args.search_term, str(field_val))
                     if score >= threshold:
-                        # store in results
-                        results.append((score, 1, record, field, field_val))
+                        results.append((score, field, field_val))
 
         elif isinstance(self.data, list):
-            # List of items
+            # A list of items
             for idx, item in enumerate(self.data, start=1):
                 if not isinstance(item, dict):
                     continue
@@ -276,9 +306,7 @@ class Console(BufferedCmd):
                     if field_val is not None:
                         score = fuzz.ratio(args.search_term, str(field_val))
                         if score >= threshold:
-                            results.append((score, idx, item, field, field_val))
-                            # break if you only want first match per item
-                            # otherwise, keep checking other fields
+                            results.append((score, field, field_val))
 
         # Sort results by score descending
         results.sort(key=lambda x: x[0], reverse=True)
@@ -286,19 +314,9 @@ class Console(BufferedCmd):
         if not results:
             self.poutput("No fuzzy matching records found.")
         else:
-            for score, idx, record, field, field_val in results:
-                if isinstance(self.data, dict):
-                    # single record case
-                    self.poutput(
-                        f"Fuzzy match (score={score}, field='{field}' -> '{field_val}'):"
-                    )
-                    self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
-                else:
-                    # list case
-                    self.poutput(
-                        f"Fuzzy match in item #{idx} (score={score}, field='{field}' -> '{field_val}'):"
-                    )
-                    self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
+            for score, field, field_val in results:
+                # Print "field: value" only
+                self.poutput(f"{field}: {field_val}")
 
         self.save_data()  # Always sync
 

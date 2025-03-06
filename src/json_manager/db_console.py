@@ -219,38 +219,86 @@ class Console(BufferedCmd):
         self.insert_record(args.record)
 
     # ---------------------------
-    # SEARCH COMMAND (Exact Match)
+    # SEARCH COMMAND (Exact, Contains, or Regex Match)
     # ---------------------------
     search_parser = cmd2.Cmd2ArgumentParser()
-    search_parser.add_argument("value", help="Value to search for (exact match)")
+    search_parser.add_argument("value", help="Value to search for. For objects, provide a JSON string.")
     search_parser.add_argument(
-        "--field",
+        "--fields",
         action="append",
         required=True,
         help="Field(s) to search in. Use dot notation for nested fields (e.g. int.hello)."
+    )
+    search_parser.add_argument(
+        "--contains",
+        action="store_true",
+        help="If provided, check if the field value contains the search query as a substring."
+    )
+    search_parser.add_argument(
+        "--regex",
+        action="store_true",
+        help="If provided, treat the search value as a regular expression and match using re.search()."
     )
     
     @cmd2.with_argparser(search_parser)
     @cmd2.with_category(CMD_CATEGORY)
     def do_search(self, args: Any) -> None:
         """
-        Search for records where any of the specified fields exactly equal the given value.
+        Search for records where any of the specified fields match the given value.
+        By default, the search requires an exact match (or deep equality if the value is JSON).
+        If the --contains flag is provided, the search checks if the field value (converted to string)
+        contains the search query as a substring.
+        If the --regex flag is provided, the search treats the search value as a regular expression.
         Prints out the entire matching object.
         
-        Usage: search <value> --field <field1> [--field <field2> ...]
+        Usage: search <value> --fields <field1> [--fields <field2> ...] [--contains] [--regex]
         """
         if not self.ensure_db():
             return
 
+        # If not using contains or regex, try to parse the search value as JSON for deep equality comparison.
+        use_json = False
+        if not args.contains and not args.regex:
+            try:
+                search_value = json.loads(args.value)
+                use_json = True
+            except Exception:
+                search_value = args.value
+        else:
+            search_value = args.value
+
         results_found = False
         for record in self.db.all():
-            for field in args.field:
+            for field in args.fields:
                 field_val = get_nested_value(record, field)
-                if field_val is not None and str(field_val) == args.value:
-                    self.poutput(f"Match found in field '{field}':")
-                    self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
-                    results_found = True
-                    break
+                if field_val is not None:
+                    str_field_val = str(field_val)
+                    if args.regex:
+                        if re.search(search_value, str_field_val):
+                            self.poutput(f"Match found in field '{field}' (regex match):")
+                            self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
+                            results_found = True
+                            break
+                    elif args.contains:
+                        if search_value in str_field_val:
+                            self.poutput(f"Match found in field '{field}' (contains match):")
+                            self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
+                            results_found = True
+                            break
+                    else:
+                        if use_json:
+                            if field_val == search_value:
+                                self.poutput(f"Match found in field '{field}' (exact JSON match):")
+                                self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
+                                results_found = True
+                                break
+                        else:
+                            if str_field_val == args.value:
+                                self.poutput(f"Match found in field '{field}' (exact string match):")
+                                self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
+                                results_found = True
+                                break
+            # Continue to next record after processing fields.
         if not results_found:
             self.poutput("No matching records found.")
 
