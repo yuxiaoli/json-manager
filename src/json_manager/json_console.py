@@ -167,7 +167,7 @@ class Console(BufferedCmd):
     # SEARCH COMMAND (Exact Match)
     # ---------------------------
     search_parser = cmd2.Cmd2ArgumentParser()
-    search_parser.add_argument("value", help="Value to search for (exact match)")
+    search_parser.add_argument("value", help="Value to search for (exact match, substring, or regex)")
     search_parser.add_argument(
         "--field",
         action="append",
@@ -177,7 +177,12 @@ class Console(BufferedCmd):
     search_parser.add_argument(
         "--contains",
         action="store_true",
-        help="If provided, check if the field value contains the search query as a substring."
+        help="If provided, check if the field value contains the search query as a substring (case-sensitive)."
+    )
+    search_parser.add_argument(
+        "--icontains",
+        action="store_true",
+        help="If provided, check if the field value contains the search query as a substring (case-insensitive)."
     )
     search_parser.add_argument(
         "--regex",
@@ -190,51 +195,62 @@ class Console(BufferedCmd):
     def do_search(self, args: Any) -> None:
         """
         Search for records (dicts) where any specified field meets the given 'value'.
-        If a match is found, only print "<field>: <value>" instead of the entire dictionary/object.
-        """
-        import json
-        import re
 
+        By default, does an EXACT match (parsing 'value' as JSON if valid).
+        If --contains is set, do a case-sensitive substring check.
+        If --icontains is set, do a case-insensitive substring check.
+        If --regex is set, interpret 'value' as a regex pattern via re.search().
+
+        Only prints "<field>: <value>" upon match, not the entire object.
+        """
         if not self.ensure_data_loaded():
             self.save_data()
             return
 
-        # 1) Decide how we interpret args.value
-        #    (Only parse as JSON if --contains/--regex are NOT provided)
-        if args.contains or args.regex:
-            search_value = args.value  # treat as raw string
+        # Decide how we interpret args.value
+        if args.regex or args.contains or args.icontains:
+            # If substring or regex is requested, keep user input as a raw string
+            search_value = args.value
         else:
+            # Otherwise, try parsing as JSON for an exact structural match
             try:
                 search_value = json.loads(args.value)
             except json.JSONDecodeError:
                 search_value = args.value
 
         def matches(field_val: Any) -> bool:
-            """Return True if field_val matches search_value (exact, substring, or regex)."""
+            """
+            Return True if field_val matches the user-provided 'search_value'
+            according to --contains, --icontains, --regex, or exact match.
+            """
             if args.regex:
+                # Regex match
                 return bool(re.search(str(search_value), str(field_val)))
+            elif args.icontains:
+                # Case-insensitive substring
+                return str(search_value).lower() in str(field_val).lower()
             elif args.contains:
+                # Case-sensitive substring
                 return str(search_value) in str(field_val)
             else:
+                # Exact match (which might be object-to-object if we parsed JSON)
                 return field_val == search_value
 
         results_found = False
 
+        # Handle single-dict or list-of-dicts
         if isinstance(self.data, dict):
-            # Single dictionary
             record = self.data
             for field in args.field:
                 field_val = get_nested_value(record, field)
                 if field_val is not None and matches(field_val):
-                    # Print only "path.key: value"
+                    # Print only "<field>: <value>"
                     self.poutput(f"{field}: {field_val}")
                     results_found = True
-                    # We stop after the first match for this dict, or continue if you like
-                    # If you want to find matches in other fields, remove this `break`
+                    # Remove if you want to find more matches in other fields
                     break
 
         elif isinstance(self.data, list):
-            # A list of items
             for idx, item in enumerate(self.data, start=1):
                 if not isinstance(item, dict):
                     continue
@@ -243,13 +259,14 @@ class Console(BufferedCmd):
                     if field_val is not None and matches(field_val):
                         self.poutput(f"{field}: {field_val}")
                         results_found = True
-                        # If you only want the first match per item, break here
+                        # Remove if you want to find more matches in other fields
                         break
 
         if not results_found:
             self.poutput("No matching records found.")
 
-        self.save_data()  # Always sync
+        # Always sync after command
+        self.save_data()
 
     # ---------------------------
     # FUZZY SEARCH COMMAND

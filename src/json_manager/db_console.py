@@ -219,12 +219,12 @@ class Console(BufferedCmd):
         self.insert_record(args.record)
 
     # ---------------------------
-    # SEARCH COMMAND (Exact, Contains, or Regex Match)
+    # SEARCH COMMAND (Exact, Contains, Regex, or Case-Insensitive Contains Match)
     # ---------------------------
     search_parser = cmd2.Cmd2ArgumentParser()
     search_parser.add_argument("value", help="Value to search for. For objects, provide a JSON string.")
     search_parser.add_argument(
-        "--fields",
+        "--field",
         action="append",
         required=True,
         help="Field(s) to search in. Use dot notation for nested fields (e.g. int.hello)."
@@ -233,6 +233,11 @@ class Console(BufferedCmd):
         "--contains",
         action="store_true",
         help="If provided, check if the field value contains the search query as a substring."
+    )
+    search_parser.add_argument(
+        "--icontains",
+        action="store_true",
+        help="If provided, check if the field value contains the search query as a substring (case-insensitive)."
     )
     search_parser.add_argument(
         "--regex",
@@ -248,17 +253,18 @@ class Console(BufferedCmd):
         By default, the search requires an exact match (or deep equality if the value is JSON).
         If the --contains flag is provided, the search checks if the field value (converted to string)
         contains the search query as a substring.
+        If the --icontains flag is provided, the search performs a case-insensitive substring match.
         If the --regex flag is provided, the search treats the search value as a regular expression.
         Prints out the entire matching object.
         
-        Usage: search <value> --fields <field1> [--fields <field2> ...] [--contains] [--regex]
+        Usage: search <value> --field <field1> [--field <field2> ...] [--contains] [--icontains] [--regex]
         """
         if not self.ensure_db():
             return
 
-        # If not using contains or regex, try to parse the search value as JSON for deep equality comparison.
+        # If not using contains, icontains, or regex, try to parse the search value as JSON for deep equality.
         use_json = False
-        if not args.contains and not args.regex:
+        if not (args.contains or args.icontains or args.regex):
             try:
                 search_value = json.loads(args.value)
                 use_json = True
@@ -269,13 +275,19 @@ class Console(BufferedCmd):
 
         results_found = False
         for record in self.db.all():
-            for field in args.fields:
+            for field in args.field:
                 field_val = get_nested_value(record, field)
                 if field_val is not None:
                     str_field_val = str(field_val)
                     if args.regex:
                         if re.search(search_value, str_field_val):
                             self.poutput(f"Match found in field '{field}' (regex match):")
+                            self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
+                            results_found = True
+                            break
+                    elif args.icontains:
+                        if search_value.lower() in str_field_val.lower():
+                            self.poutput(f"Match found in field '{field}' (case-insensitive contains match):")
                             self.poutput(json.dumps(record, indent=4, ensure_ascii=False))
                             results_found = True
                             break
@@ -308,7 +320,7 @@ class Console(BufferedCmd):
     fuzzy_parser = cmd2.Cmd2ArgumentParser()
     fuzzy_parser.add_argument("search_term", help="Term to fuzzy search for")
     fuzzy_parser.add_argument(
-        "--fields",
+        "--field",
         action="append",
         required=True,
         help="Field(s) to perform fuzzy search on. Use dot notation for nested fields (e.g. int.hello)."
@@ -328,7 +340,7 @@ class Console(BufferedCmd):
         For each record, each specified field is checked using fuzzy matching.
         Matching records are sorted in descending order by score and then printed.
         
-        Usage: fuzzy_search <search_term> --fields <field1> [--fields <field2> ...] [--threshold <score>]
+        Usage: fuzzy_search <search_term> --field <field1> [--field <field2> ...] [--threshold <score>]
         """
         if not self.ensure_db():
             return
@@ -337,7 +349,7 @@ class Console(BufferedCmd):
         matches: List[Tuple[Dict[str, Any], str, Any, int]] = []  # (record, field, field_val, score)
 
         for record in self.db.all():
-            for field in args.fields:
+            for field in args.field:
                 field_val = get_nested_value(record, field)
                 if field_val is not None:
                     score = fuzz.ratio(args.search_term, str(field_val))
