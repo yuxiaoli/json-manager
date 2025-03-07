@@ -9,6 +9,8 @@ import requests  # For downloading JSON from a URL
 from thefuzz import fuzz  # For fuzzy matching score
 from dotenv import load_dotenv  # For loading environment variables from .env
 
+from json_manager.main import download_json
+
 CMD_CATEGORY = "JSON Manager"
 
 
@@ -87,7 +89,8 @@ class Console(BufferedCmd):
                 response.raise_for_status()
                 data = response.json()
                 # We’ll store the downloaded data into "downloaded.json"
-                self.file_path = "downloaded.json"
+                # self.file_path = "downloaded.json"
+                self.file_path = download_json(url=source)
             except Exception as e:
                 self.perror(f"Error downloading JSON: {e}")
                 self.file_path = previous_file_path
@@ -125,7 +128,7 @@ class Console(BufferedCmd):
         Usage: load <source>
         """
         self.load_json(args.source.strip())
-        self.save_data()  # Always sync
+        # self.save_data()  # Always sync
 
     insert_parser = cmd2.Cmd2ArgumentParser()
     insert_parser.add_argument("record", help="JSON string representing the record to insert")

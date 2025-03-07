@@ -6,7 +6,9 @@ import json
 from urllib.parse import urlparse
 import requests
 
-def download_json(url: str, temp_dir: str) -> str:
+TEMP_DIR = "temp/"
+
+def download_json(url: str, temp_dir: str=TEMP_DIR) -> str:
     """
     Download JSON from a URL into the temporary directory.
     Uses the last part of the URL path as the filename,

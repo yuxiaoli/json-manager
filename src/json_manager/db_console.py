@@ -13,6 +13,8 @@ from tinydb.storages import JSONStorage
 from thefuzz import fuzz  # For fuzzy matching score
 from dotenv import load_dotenv  # For loading environment variables from .env
 
+from json_manager.main import download_json
+
 CMD_CATEGORY = "JSON Manager"
 
 
@@ -128,9 +130,10 @@ class Console(BufferedCmd):
                 response.raise_for_status()
                 data = response.json()
                 # Save downloaded JSON temporarily as "downloaded.json"
-                self.file_path = "downloaded.json"
-                with open(self.file_path, "w", encoding="utf-8", errors="replace") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
+                # self.file_path = "downloaded.json"
+                # with open(self.file_path, "w", encoding="utf-8", errors="replace") as f:
+                #     json.dump(data, f, ensure_ascii=False, indent=4)
+                self.file_path = download_json(url=source)
             except Exception as e:
                 self.perror(f"Error downloading JSON: {e}")
                 self.file_path = previous_file_path
