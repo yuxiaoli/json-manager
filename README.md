@@ -1,156 +1,132 @@
 # JSON Manager
 
-JSON Manager is a command-line interface (CLI) tool for managing JSON files in multiple formats. It provides two distinct consoles for working with JSON data:
+JSON Manager is a versatile command-line tool for managing JSON files, featuring two specialized console interfaces:
 
-- **Database Console:** Launched when the JSON file is TinyDB‑compatible (i.e. contains a `_default` key with a dict value) or when the JSON is a list. This console leverages TinyDB for database-like operations.
-- **JSON Console:** Launched for JSON files that do not match the TinyDB format, offering commands for inspecting and modifying standard JSON objects.
+- **DB Console**: For JSON files compatible with TinyDB, enabling database-like operations.
+- **JSON Console**: For general JSON files, offering basic inspection and editing capabilities.
 
-The tool also supports downloading JSON data from a URL into a temporary directory and then processing it accordingly.
+JSON Manager automatically determines the appropriate interface based on the loaded data structure, including support for downloading JSON directly from URLs.
 
 ---
 
 ## Features
 
-- **Flexible JSON Loading:**  
-  Load JSON files from local paths or remote URLs.
-- **Automatic Format Detection:**  
-  The tool inspects the JSON structure and automatically selects the appropriate console (database or JSON) based on the format.
-- **Rich Command-Line Interface:**  
-  Built on top of [cmd2](https://cmd2.readthedocs.io/), it offers a variety of commands such as:
-  - `load` to load a JSON file or URL.
-  - `insert` to add records.
-  - `search` and `fuzzy_search` for finding records.
-  - `open_json` to open the file with your default editor.
-  - `status` to view the current state of the loaded data.
-- **TinyDB Integration:**  
-  For JSON files in TinyDB format, enjoy database operations with TinyDB.
-- **Customizable Environment:**  
-  Leverage environment variables (e.g., `EDITOR`) for a personalized setup.
+- **Dual-Console Interface**:
+  - Automatically selects between DB and JSON console based on JSON structure.
+- DB Console supports database operations (insert, search, fuzzy search) via TinyDB.
+  - Custom UTF-8 Storage handling for improved compatibility.
+  - Automatic JSON format conversion for TinyDB compatibility.
+- **Remote JSON Loading**: Directly load JSON data from URLs into a local environment.
+- **Buffered Command Interface**: Enhanced interaction built on `cmd2`, supporting command history, colorized output, and configurable prompts.
+- **Persistent Data Management**: Automatic data synchronization to disk after command execution.
+
+## Features
+
+- Load JSON from local files or URLs.
+- Insert new records into JSON lists.
+- Comprehensive search functionalities:
+  - Exact match
+  - Substring match (case-sensitive and case-insensitive)
+  - Regex matching
+  - Fuzzy matching using `thefuzz` library
+- Open JSON files in the system’s default editor via `EDITOR` environment variable.
+- Detailed status command to inspect current loaded data.
 
 ---
 
 ## Prerequisites
 
-- **Python:** 3.6+
-- **Required Python Libraries:**
+- Python 3.6+
+- Dependencies:
   - `cmd2`
   - `tinydb`
   - `requests`
   - `thefuzz`
   - `python-dotenv`
 
-You can install the required libraries using either of the following methods:
-
-- **Using a requirements file:**
-
-  ```bash
-  pip install -r requirements.txt
-  ```
-
-- **Using pip from PyPI:**
-
-  ```bash
-  pip install json-manager-cli
-  ```
-
----
-
-## Installation
-
-Clone the repository and navigate to the project directory if you prefer the source:
-
+Install dependencies with:
 ```bash
-git clone <repository_url>
-cd json_manager
+pip install cmd2 tinydb requests thefuzz python-dotenv
 ```
-
-Alternatively, you can install the CLI directly from PyPI using:
-
-```bash
-pip install json-manager-cli
-```
-
----
 
 ## Project Structure
 
 ```
-json_manager/
-├── __init__.py
-├── db_console.py        # CLI for TinyDB-compatible or list JSON files.
-├── buffered_cmd2.py     # Custom cmd2 subclass for buffered command output.
-├── json_console.py      # CLI for general JSON files.
-└── main.py              # Entry point: selects and launches the appropriate console.
+src/
+└── json_manager
+    ├── __init__.py
+    ├── db_console.py         # TinyDB-based operations
+    ├── json_console.py       # General JSON handling
+    ├── buffered_cmd2.py      # Enhanced cmd2 console interface
+    └── main.py               # Entry point, dynamically selects the console
 ```
-
----
 
 ## Usage
 
-### Running the CLI
+### Launching the JSON Manager CLI
 
-After installation, you have two options for running JSON Manager:
+From the project root directory:
+```bash
+python src/json_manager/main.py [--json <path_or_url>]
+```
 
-1. **Directly via Python:**
+### Common Commands
 
-   ```bash
-   python main.py <path_or_url_to_json> [--temp <temp_directory>]
-   ```
+- **Load JSON**
+```bash
+load <path_or_url>
+```
 
-2. **Using the `jsoncli` command (if installed from PyPI):**
+- **Insert Record** (only when data is a list):
+```bash
+insert '{"name": "Alice", "age": 30}'
+```
 
-   ```bash
-   jsoncli <path_or_url_to_json> [--temp <temp_directory>]
-   ```
+- **Search Records**
+```bash
+search <value> --field <field1> [--contains|--icontains|--regex]
+```
 
-### Examples
+- **Fuzzy Search**
+```bash
+fuzzy_search <search_term> --field <field> [--threshold <score>]
+```
 
-- **Load a local JSON file:**
+- **Open JSON in Editor**
+```bash
+open_json
+```
 
-  ```bash
-  jsoncli data/sample.json
-  ```
+- **Check Status**
+```bash
+status
+```
 
-- **Download and load a JSON file from a URL (saved to the default `temp/` directory):**
+## Environment Configuration
 
-  ```bash
-  jsoncli https://example.com/data.json
-  ```
+Ensure your preferred text editor is set in your environment:
+```bash
+export EDITOR=nano
+```
 
-- **Specify a custom temporary directory:**
+## Custom Storage Handling
 
-  ```bash
-  jsoncli https://example.com/data.json --temp /path/to/temp/
-  ```
+The tool uses a custom TinyDB storage class (`UTF8ReplaceJSONStorage`) to handle UTF-8 decoding errors gracefully, replacing problematic characters to avoid crashes.
 
-Based on the JSON structure, the tool will automatically launch either the **database console** or the **JSON console**. Within these consoles, you can use commands like:
+## Dependencies
 
-- `load` — Load a new JSON file or URL.
-- `insert` — Insert new records into the data.
-- `search` and `fuzzy_search` — Find records using exact or fuzzy matching.
-- `open_json` — Open the current JSON file in your preferred editor.
-- `status` — Display details about the loaded file and data.
+- `cmd2`
+- `tinydb`
+- `requests`
+- `thefuzz`
+- `python-dotenv`
+
+## Notes
+
+- The tool automatically determines whether to use DB Console or JSON Console based on the structure of the JSON file.
+- All changes to JSON data are immediately synchronized to disk.
 
 ---
 
-## Contributing
+**Happy JSON managing!**
 
-Contributions are welcome! If you have suggestions, improvements, or bug fixes, please open an issue or submit a pull request.
-
----
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- [cmd2](https://cmd2.readthedocs.io/)
-- [TinyDB](https://tinydb.readthedocs.io/)
-- [thefuzz](https://github.com/seatgeek/thefuzz)
-- [Requests](https://docs.python-requests.org/)
-- [python-dotenv](https://github.com/theskumar/python-dotenv)
-
-Enjoy using JSON Manager!
